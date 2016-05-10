@@ -21,6 +21,7 @@
 # THE SOFTWARE.
 
 # Changelog:
+# 1.1 - compress multiple messages into one
 # 1.0 - initial release, based on email_msgs 1.0:
 #   * support for public messages as well (with/without mentions);
 #   * support for own messages as well;
@@ -45,7 +46,7 @@ use POSIX qw(strftime);
 #use Net::SSL (); # From Crypt-SSLeay
 use LWP::UserAgent;
 
-$VERSION = '1.0';
+$VERSION = '1.1';
 %IRSSI = (
 	authors => 'Max Lee',
 	contact => 'mail@moep.tv',
@@ -55,37 +56,35 @@ $VERSION = '1.0';
 	description =>
 		"Send you messages via telegram while you're away or not. " .
 		"Works for both public mentions and private messages." .
-		"When away, it is very useful in combination with screen_away. " .
+		"When away, it is very useful in combination with proxy_screen_away. " .
 		"Based on email_msgs, with advanced features and options. ",
 	license => 'MIT',
 );
 
 my $FORMAT = $IRSSI{'name'} . '_crap';
-my $msgs = {};
+my @msgs = ();
+my $notify_task = undef;
 
 # user configurable variables (1->yes; 0->no):
 ##############################################
-# your bot's api key:
-my $api_key = '123456:abcdefghijklmnobq';
-# your destination chat id, get it via messaging your bot and 
-# opening https://api.telegram.org/bot{your api key}/getUpdates
-my $chat_id = '123456';
 # whether the script should work only when away:
-my $away_only  = 0;
+my $away_only    = 0;
 # include detailed info like the hostname of the sender:
-my $detailed   = 1;
-# interval to check for messages (in seconds):
-my $interval   = 300;
+my $detailed     = 1;
+# delay (in milliseconds) a message should wait for additional ones before sending (0 disables it):
+my $delay        = 1000;
+# after how many messages should we notify even when more are comming in during the delay (0 disables it):
+my $notify_after = 10;
 # whether public messages received (including mentions) should be send:
-my $pub_r_msgs = 0;
+my $pub_r_msgs   = 0;
 # whether private messages received should be send:
-my $pri_r_msgs = 1;
+my $pri_r_msgs   = 1;
 # whether public messages sent should be send:
-my $pub_s_msgs = 0;
+my $pub_s_msgs   = 0;
 # whether private messages sent should be send:
-my $pri_s_msgs = 0;
+my $pri_s_msgs   = 0;
 # whether public mentions received should be send (when $pub_r_msgs=0):
-my $mentions   = 1;
+my $mentions     = 1;
 ##############################################
 
 Irssi::settings_add_str('misc', $IRSSI{'name'} . '_api_key', '');
@@ -95,6 +94,14 @@ Irssi::theme_register([
 	$FORMAT,
 	'{line_start}{hilight ' . $IRSSI{'name'} . ':} $0'
 ]);
+
+# your bot's api key:
+my $api_key = Irssi::settings_get_str($IRSSI{'name'} . '_api_key');
+# your destination chat id, get it via messaging your bot and 
+# opening https://api.telegram.org/bot{your api key}/getUpdates
+my $to_chat_id = Irssi::settings_get_str($IRSSI{'name'} . '_to_chat_id');
+
+return if (!check_setup($api_key, $to_chat_id));	
 
 sub handle_ownprivmsg {
 	my ($server, $message, $target, $orig_target) = @_;
@@ -148,23 +155,52 @@ sub check_setup {
 sub send_msg {
 	my ($server, $message, $user, $address, $target) = @_;
 
-	my $api_key = Irssi::settings_get_str($IRSSI{'name'} . '_api_key');
-	my $to_chat_id = Irssi::settings_get_str($IRSSI{'name'} . '_to_chat_id');
-
-	return if (!check_setup($api_key, $to_chat_id));	
-	
 	if ($target =~ /^@/) {
 		$target = "@";
 	}
 
+	my $tg_msg = '[IRC] ' . $target .' | ' .  $user . ': ' . $message;
+
+	if ($delay == 0) {
+		api_call($tg_msg);
+	} else {
+		# Remove the old notify task
+		if (defined $notify_task) {
+			Irssi::timeout_remove($notify_task);
+			undef $notify_task;
+		}
+
+		# add msg to messages array
+		push @msgs, $tg_msg;
+
+		# check if we should force send messages after a specific number of messages in the cache 
+		if ($notify_after > 0 && scalar @msgs >= $notify_after) {
+			process_msgs();
+		} else {
+			$notify_task = Irssi::timeout_add_once($delay, 'process_msgs', '')
+		}
+	}
+}
+
+sub process_msgs {
+	if (scalar @msgs <= 0) {
+		return;
+	}
+	my $tg_msg = join("\n", @msgs);
+	@msgs = ();
+	api_call($tg_msg);
+}
+
+sub api_call {
+	my ($text) = @_;
+
 	use URI::Escape;	
-	my $urla = uri_escape('[IRC] ' . $target .' | ' .  $user . ': ' . $message);
+	my $escaped = uri_escape($text);
 
 	my $ua = LWP::UserAgent->new();
-	my $req = HTTP::Request->new('GET','https://api.telegram.org/bot' . $api_key . '/sendMessage?chat_id=' . $to_chat_id . '&text=' . $urla);
+	my $req = HTTP::Request->new('GET','https://api.telegram.org/bot' . $api_key . '/sendMessage?chat_id=' . $to_chat_id . '&text=' . $escaped);
 #	Irssi::printformat(MSGLEVEL_CLIENTCRAP, $FORMAT, $urla);
 	my $res = $ua->request($req);
-
 }
 
 if ($pub_r_msgs || $mentions) {
