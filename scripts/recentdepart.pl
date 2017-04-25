@@ -56,7 +56,7 @@ use warnings;
 use Irssi;
 use Irssi::Irc;
 
-our $VERSION = "0.7";
+our $VERSION = "0.7.1";
 our %IRSSI = (
     authors     => 'Matthew Sytsma',
     contact     => 'spiderpigy@yahoo.com',
@@ -149,41 +149,7 @@ sub check_channel
             ($chanlist{$server->{'chatnet'}}{$channel}));
 }
 
-# Hook for quitting
-sub on_quit
-{
-	my ($server, $nick, $address, $reason) = @_;
-
-        if ($server->{'nick'} eq $nick)
-        {  return;   }
-
-	if (check_channel($server, '*'))
-        {
-            my $recent = 0;
-            foreach my $chan (keys %{ $nickhash{$server->{'tag'}}{lc($nick)} })
-            {
-                 if (time() - $nickhash{$server->{'tag'}}{lc($nick)}{$chan} < Irssi::settings_get_int("recdep_period"))
-                 {
-                     $recent = 1;
-
-                     if (Irssi::settings_get_int("recdep_rejoin") > 0)
-                     {
-                         $joinwatch{$server->{'tag'}}{$chan}{lc($nick)} = time();
-                     }
-                 }
-            }
-
-            delete $nickhash{$server->{'tag'}}{lc($nick)};
-
-            if (!$recent)
-            {
-                $use_hide ? $Irssi::scripts::hideshow::hide_next = 1
-		    : Irssi::signal_stop();
-            }
-	}
-}
-
-# Hook for parting
+# Hook for parting (and quitting)
 sub on_part 
 {
 	my ($server, $channel, $nick, $address, $reason) = @_;
@@ -277,29 +243,40 @@ sub on_join
 # Hook for nick changes
 sub on_nick 
 {
-        my ($server, $new, $old, $address) = @_;
+        my ($server, $channel, $new, $old) = @_;
 
         if ($server->{'nick'} eq $old || $server->{'nick'} eq $new)
         {  return;   }
    
-        if (check_channel($server, '*'))
+        if (Irssi::settings_get_int("recdep_nickperiod") > 0 && check_channel($server, $channel))
         {
-            my $recent = 0;
-            foreach my $chan (keys %{ $nickhash{$server->{'tag'}}{lc($old)} })
-            {
-                 if (time() - $nickhash{$server->{'tag'}}{lc($old)}{$chan} < Irssi::settings_get_int("recdep_nickperiod"))
-                 {
-                     $recent = 1;
-                 }
-            }
-
-            if (!$recent && Irssi::settings_get_int("recdep_nickperiod") > 0)
+            if (!defined $nickhash{$server->{'tag'}}{lc($old)}{$channel} || time() - $nickhash{$server->{'tag'}}{lc($old)}{$channel} < Irssi::settings_get_int("recdep_nickperiod"))
             {
                 $use_hide ? $Irssi::scripts::hideshow::hide_next = 1
 		    : Irssi::signal_stop();
             }
 
            delete $nickhash{$server->{'tag'}}{lc($old)}; 
+        }
+}
+
+# Hook for nick changes and quits
+sub on_text
+{
+        my ($dest, $text, $stripped) = @_;
+
+        if ($dest->{'level'} & MSGLEVEL_NICKS)
+        {
+            if ($stripped =~ m/\[\~\] ([^ ]+) is now known as ([^ ]+)/)
+            {
+                on_nick($dest->{'server'}, $dest->{'target'}, $2, $1);
+            }
+        } elsif ($dest->{'level'} & MSGLEVEL_QUITS)
+        {
+            if ($stripped =~ m/\[-\] ([^ ]+) \[(.+?)] has quit \((.+)\)/)
+            {
+                on_part($dest->{'server'}, $dest->{'target'}, $1, $2, $3);
+            }
         }
 }
 
@@ -316,9 +293,8 @@ sub on_serverquit
 # Setup hooks on events
 Irssi::signal_add_last("message public", "on_public");
 Irssi::signal_add_last("message part", "on_part");
-Irssi::signal_add_last("message quit", "on_quit");
-Irssi::signal_add_last("message nick", "on_nick");
 Irssi::signal_add_last("message join", "on_join");
+Irssi::signal_add_last("print text", "on_text");
 Irssi::signal_add_last("server disconnected", "on_serverquit");
 Irssi::signal_add_last("server quit", "on_serverquit");
 Irssi::signal_add('setup changed', "on_setup_changed");
