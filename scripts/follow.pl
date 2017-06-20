@@ -34,7 +34,9 @@ my $follow = 0;
 
 sub sig_own {
     my ($server, $msg, $target, $orig_target) = @_;
-    $server->printformat($target, MSGLEVEL_CRAP, 'follow_fool');
+    if ($follow) {
+        $server->printformat($target, MSGLEVEL_CRAP, 'follow_fool');
+    }
 }
 
 sub follow {
