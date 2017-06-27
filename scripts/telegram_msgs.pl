@@ -46,6 +46,10 @@ use POSIX qw(strftime);
 #use Net::SSL (); # From Crypt-SSLeay
 use LWP::UserAgent;
 
+use Parallel::ForkManager;
+
+my $pm = Parallel::ForkManager->new(5);
+
 $VERSION = '1.1';
 %IRSSI = (
 	authors => 'Max Lee',
@@ -101,6 +105,7 @@ my $api_key = Irssi::settings_get_str($IRSSI{'name'} . '_api_key');
 # opening https://api.telegram.org/bot{your api key}/getUpdates
 my $to_chat_id = Irssi::settings_get_str($IRSSI{'name'} . '_to_chat_id');
 
+
 return if (!check_setup($api_key, $to_chat_id));	
 
 sub handle_ownprivmsg {
@@ -130,11 +135,14 @@ sub handle_privmsg {
 sub handle_pubmsg {
 	my ($server, $message, $user, $address, $target) = @_;
 
-	if ($server->{usermode_away} || !$away_only) {
+	if ($server->{usermode_away} && $target eq "#moep") {
+		send_msg($server, $message, $user, $address, $target);
+	} elsif ($server->{usermode_away} || !$away_only) {
 		if (index($message,$server->{nick}) >= 0 || $pub_r_msgs) {
 			send_msg($server, $message, $user, $address, $target);
 		}
 	}
+
 }
 
 sub check_setup {
@@ -197,10 +205,16 @@ sub api_call {
 	use URI::Escape;	
 	my $escaped = uri_escape($text);
 
-	my $ua = LWP::UserAgent->new();
-	my $req = HTTP::Request->new('GET','https://api.telegram.org/bot' . $api_key . '/sendMessage?chat_id=' . $to_chat_id . '&text=' . $escaped);
-#	Irssi::printformat(MSGLEVEL_CLIENTCRAP, $FORMAT, $urla);
-	my $res = $ua->request($req);
+	foreach (1) {
+		my $pid = $pm->start and next;
+
+		my $ua = LWP::UserAgent->new();
+		my $req = HTTP::Request->new('GET','https://api.telegram.org/bot' . $api_key . '/sendMessage?chat_id=' . $to_chat_id . '&text=' . $escaped);
+#		Irssi::printformat(MSGLEVEL_CLIENTCRAP, $FORMAT, $urla);
+		my $res = $ua->request($req);
+#                Irssi::printformat(MSGLEVEL_CLIENTCRAP, $FORMAT, 'Request returned ' . $res->content());
+		$pm->finish;
+	}
 }
 
 if ($pub_r_msgs || $mentions) {
