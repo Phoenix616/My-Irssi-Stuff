@@ -69,26 +69,36 @@ my $FORMAT = $IRSSI{'name'} . '_crap';
 my @msgs = ();
 my $notify_task = undef;
 
+Irssi::settings_add_str('misc', $IRSSI{'name'} . '_away_only', '0');
+Irssi::settings_add_str('misc', $IRSSI{'name'} . '_detailed', '1');
+Irssi::settings_add_str('misc', $IRSSI{'name'} . '_delay', '1000');
+Irssi::settings_add_str('misc', $IRSSI{'name'} . '_notify_after', '10');
+Irssi::settings_add_str('misc', $IRSSI{'name'} . '_pub_r_msgs', '0');
+Irssi::settings_add_str('misc', $IRSSI{'name'} . '_pri_r_msgs', '1');
+Irssi::settings_add_str('misc', $IRSSI{'name'} . '_pub_s_msgs', '0');
+Irssi::settings_add_str('misc', $IRSSI{'name'} . '_pri_s_msgs', '0');
+Irssi::settings_add_str('misc', $IRSSI{'name'} . '_mentions', '1');
+
 # user configurable variables (1->yes; 0->no):
 ##############################################
 # whether the script should work only when away:
-my $away_only    = 0;
+my $away_only    = Irssi::settings_get_str($IRSSI{'name'} . '_away_only');
 # include detailed info like the hostname of the sender:
-my $detailed     = 1;
+my $detailed     = Irssi::settings_get_str($IRSSI{'name'} . '_detailed');
 # delay (in milliseconds) a message should wait for additional ones before sending (0 disables it):
-my $delay        = 1000;
+my $delay        = Irssi::settings_get_str($IRSSI{'name'} . '_delay');
 # after how many messages should we notify even when more are comming in during the delay (0 disables it):
-my $notify_after = 10;
+my $notify_after = Irssi::settings_get_str($IRSSI{'name'} . '_notify_after');
 # whether public messages received (including mentions) should be send:
-my $pub_r_msgs   = 0;
+my $pub_r_msgs   = Irssi::settings_get_str($IRSSI{'name'} . '_pub_r_msgs');
 # whether private messages received should be send:
-my $pri_r_msgs   = 1;
+my $pri_r_msgs   = Irssi::settings_get_str($IRSSI{'name'} . '_pri_r_msgs');
 # whether public messages sent should be send:
-my $pub_s_msgs   = 0;
+my $pub_s_msgs   = Irssi::settings_get_str($IRSSI{'name'} . '_pub_s_msgs');
 # whether private messages sent should be send:
-my $pri_s_msgs   = 0;
+my $pri_s_msgs   = Irssi::settings_get_str($IRSSI{'name'} . '_pri_s_msgs');
 # whether public mentions received should be send (when $pub_r_msgs=0):
-my $mentions     = 1;
+my $mentions     = Irssi::settings_get_str($IRSSI{'name'} . '_mentions');
 ##############################################
 
 Irssi::settings_add_str('misc', $IRSSI{'name'} . '_api_key', '');
@@ -205,16 +215,16 @@ sub api_call {
 	use URI::Escape;	
 	my $escaped = uri_escape($text);
 
-	foreach (1) {
-		my $pid = $pm->start and next;
+#	foreach (1) {
+#		my $pid = $pm->start:# and next;
 
 		my $ua = LWP::UserAgent->new();
 		my $req = HTTP::Request->new('GET','https://api.telegram.org/bot' . $api_key . '/sendMessage?chat_id=' . $to_chat_id . '&text=' . $escaped);
 #		Irssi::printformat(MSGLEVEL_CLIENTCRAP, $FORMAT, $urla);
 		my $res = $ua->request($req);
 #                Irssi::printformat(MSGLEVEL_CLIENTCRAP, $FORMAT, 'Request returned ' . $res->content());
-		$pm->finish;
-	}
+#		$pm->finish;
+#	}
 }
 
 if ($pub_r_msgs || $mentions) {
