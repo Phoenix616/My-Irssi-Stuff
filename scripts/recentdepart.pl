@@ -170,10 +170,12 @@ sub on_part
         }
 	elsif (check_channel($server, $channel))
         {
+            my $r = 0;
             if (!defined $nickhash{$server->{'tag'}}{lc($nick)}{$channel} || time() - $nickhash{$server->{'tag'}}{lc($nick)}{$channel} > Irssi::settings_get_int("recdep_period"))
             {
                 $use_hide ? $Irssi::scripts::hideshow::hide_next = 1
 		    : Irssi::signal_stop();
+                $r = 1;
             }
             elsif (Irssi::settings_get_int("recdep_rejoin") > 0)
             {
@@ -185,7 +187,9 @@ sub on_part
             {
                 delete $nickhash{$server->{'tag'}}{lc($nick)};
             }
+            return $r;
 	}
+        return 0;
 }
 
 # Hook for public messages.
@@ -246,18 +250,21 @@ sub on_nick
         my ($server, $channel, $new, $old) = @_;
 
         if ($server->{'nick'} eq $old || $server->{'nick'} eq $new)
-        {  return;   }
+        {  return 0;   }
    
+        my $r = 0;
         if (Irssi::settings_get_int("recdep_nickperiod") > 0 && check_channel($server, $channel))
         {
             if (!defined $nickhash{$server->{'tag'}}{lc($old)}{$channel} || time() - $nickhash{$server->{'tag'}}{lc($old)}{$channel} < Irssi::settings_get_int("recdep_nickperiod"))
             {
                 $use_hide ? $Irssi::scripts::hideshow::hide_next = 1
 		    : Irssi::signal_stop();
+                $r = 1;
             }
 
-           delete $nickhash{$server->{'tag'}}{lc($old)}; 
+            delete $nickhash{$server->{'tag'}}{lc($old)};
         }
+        return $r;
 }
 
 # Hook for nick changes and quits
@@ -267,15 +274,17 @@ sub on_text
 
         if ($dest->{'level'} & MSGLEVEL_NICKS)
         {
-            if ($stripped =~ m/\[\~\] ([^ ]+) is now known as ([^ ]+)/)
+            if ($stripped =~ m/\[\~\] ([^ ]+) is now known as ([^ ]+)/ && on_nick($dest->{'server'}, $dest->{'target'}, $2, $1))
             {
-                on_nick($dest->{'server'}, $dest->{'target'}, $2, $1);
+                $use_hide ? $Irssi::scripts::hideshow::hide_next = 1
+                    : Irssi::signal_stop();
             }
         } elsif ($dest->{'level'} & MSGLEVEL_QUITS)
         {
-            if ($stripped =~ m/\[-\] ([^ ]+) \[(.+?)] has quit \((.+)\)/)
+            if ($stripped =~ m/\[-\] ([^ ]+) \[(.+?)] has quit \((.+)\)/ && on_part($dest->{'server'}, $dest->{'target'}, $1, $2, $3))
             {
-                on_part($dest->{'server'}, $dest->{'target'}, $1, $2, $3);
+                $use_hide ? $Irssi::scripts::hideshow::hide_next = 1
+                    : Irssi::signal_stop();
             }
         }
 }
