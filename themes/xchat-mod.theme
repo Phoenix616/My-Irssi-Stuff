@@ -89,7 +89,7 @@ abstracts = {
 
   # Actions
 
-  action_core = "%w            * %K| %w$*%n";
+  action_core = "%w          * %K| %w$*%n";
 
   # generic one that's used by most actions
   action = "{action_core $*} ";
@@ -113,7 +113,7 @@ abstracts = {
   wallop_action = "%W * $*%n ";
 
   # DCC
-  dcc = "           %K|%G $*%n";
+  dcc = "%w        DCC %K|%G $*%n";
   #dccfile = "%_$*%_";
 
   # DCC chat, own msg/action
@@ -196,10 +196,10 @@ formats = {
   };
   "fe-common/core" = {
     line_start_irssi = "";
-    join = "%K[%w+%K] {channick_hilight $0} {chanhost_hilight $1} has joined %b{channel $2}";
-    part = "%K[%w-%K] {channick_hilight $0} {chanhost_hilight $1} has left %b{channel $_$2$_} %K(%b{reason  $3}%K)";
-    kick = "%K[%w-%K] %b{nick $2} has kicked {channick_hilight $0} %Kfrom %b{channel $_$1$_} %K(%b{reason $3}%K)";
-    quit = "%K[%w-%K] {channick_hilight $0} %K[%b$1%K] %Khas quit %K(%b{reason $2}%K)";
+    join = "%m          %g+ %K| {channick_hilight $0} {chanhost_hilight $1} has joined %b{channel $2}";
+    part = "%m          %R- %K| {channick_hilight $0} {chanhost_hilight $1} has left %b{channel $_$2$_} %K(%b{reason  $3}%K)";
+    kick = "%m          %m- %K| %b{nick $2} has kicked {channick_hilight $0} %Kfrom %b{channel $_$1$_} %K(%b{reason $3}%K)";
+    quit = "%m          %r- %K| {channick_hilight $0} %K[%b$1%K] %Khas quit %K(%b{reason $2}%K)";
     names = "%B Users on $0:";
     names_prefix = "";
     names_nick_op = "%K[%C$0%n$1-%K] ";
@@ -208,24 +208,24 @@ formats = {
     names_nick = "%K[%n$0$1%K] ";
     endofnames = "%nUsers %c$1 %nnicks %K[%c$2 %nops, %c$3 %nhalfops, %c$4 %nvoices, %c$5 %nnormal%K]";
     quit_once = "{channel $3} {channick $0} {chanhost $1} %K(%n{reason $2}%K)%n {channel $_$2$_}";
-    nick_changed = "%K[%w~%K] %B$0 %Kis now known as %B$1";
-    chanmode_change = "%K[%w/%K] %W{nickhilight $2} %nsets modes %K[%n{$channelhilight $0} {mode $1}%K]";
-    channel_mode = "%K[%w/%K] %W{nickhilight $2} %nsets modes %K[%n{$channelhilight $0} {mode $1}%K]";
-    topic = "%K[%w/%K] %nTopic for {channelhilight $0} is $1";
-    new_topic = "%K[%w/%K] %W{nick $0} %nhas changed the topic to: %C$2";
-    topic_unset = "%K[%w/%K] %nTopic unset by {nick $0} on {channel $1}";
-    daychange = "%KDay changed to %%d %%b %%Y";
-    your_nick_changed = "%K[%w~%K] %KYou're now known as %W$1";
+    nick_changed = "%m          %p~ %K| %B$0 %Kis now known as %B$1";
+    chanmode_change = "%m          %c/ %K| %W{nickhilight $2} %nsets modes %K[%n{$channelhilight $0} {mode $1}%K]";
+    channel_mode = "%m          %C/ %K| %W{nickhilight $2} %nsets modes %K[%n{$channelhilight $0} {mode $1}%K]";
+    topic = "%m          %y/ %K| %nTopic for {channelhilight $0} is $1";
+    new_topic = "%m          %Y/ %K| %W{nick $0} %nhas changed the topic to: %C$2";
+    topic_unset = "%m          %Y/ %K| %nTopic unset by {nick $0} on {channel $1}";
+    daychange = "%bDay changed to %%d %%b %%Y";
+    your_nick_changed = "%m          %P~ %K| %KYou're now known as %W$1";
 
-    pubmsg = "%K<%w$2\00303$[-11]0%K>%K|%n $1";
-    own_msg_private_query = "%m<%W$[-11]2%m>%K| %n$1";
-    msg_private_query = "%b<%w$[-11]0%b>%K| %n$2";
-    own_msg = "%w<%y$2$[-11]0%w>%K| %n$1";
-    own_msg_private = "%G>%Y$[-11]0%G<%K|%n $1-";
-    pubmsg_me = "{pubmsgmenick {menick $[-11]0}}%K|%n $1";
-    pubmsg_me_channel = "{pubmsgmenick $3 {menick $[-11]0}{msgchannel $1}}%K|%n $2";
-    pubmsg_hilight = "{pubmsghinick $0 $3 $[-11]1}%K|%n $2";
-    pubmsg_hilight_channel = "{pubmsghinick $0 $4 $[-11]1{msgchannel $2}}%K|%n $3";
+    pubmsg = "%w$2\00303$[-11]0%K|%n $1";
+    own_msg_private_query = "%y$[-11]2%K|%n $1";
+    msg_private_query = "%w$[-11]0%K|%n $2";
+    own_msg = "%y$2$[-11]0%K| %n$1";
+    own_msg_private = "%Y$[-11]0%K|%n $1-";
+    pubmsg_me = "{pubmsgmenick {menick $[-11]0}}%K|%Y $1";
+    pubmsg_me_channel = "{pubmsgmenick $3 {menick $[-11]0}{msgchannel $1}}%K|%Y $2";
+    pubmsg_hilight = "{pubmsghinick $0$3$[-11]1}%K|%Y $2";
+    pubmsg_hilight_channel = "{pubmsghinick $0$4$[-11]1{msgchannel $2}}%K|%Y $3";
     #pubmsg_channel = "{pubmsgnick {pubnick $[-11]0}{msgchannel $1}}%K|%n $2";
 
     #pubmsg = "{pubmsgnick $2 {pubnick \00304$0}}$1";

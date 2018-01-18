@@ -1,21 +1,16 @@
 use strict;
 use Irssi 20020101.0250 ();
 use vars qw($VERSION %IRSSI); 
-$VERSION = "1";
+$VERSION = "1.1";
 %IRSSI = (
-    authors     => "Timo Sirainen, Ian Peters",
-    contact => "tss\@iki.fi", 
+    authors     => "Timo Sirainen, Ian Peters, Max Lee",
+    contact => "tss\@iki.fi, Max Lee: mail\@moep.tv", 
     name        => "Nick Color",
     description => "assign a different color for each nick",
     license => "Public Domain",
     url     => "http://irssi.org/",
-    changed => "2002-03-04T22:47+0100"
+    changed => "2018-01-18T15:13+0100"
 );
-
-# hm.. i should make it possible to use the existing one..
-Irssi::theme_register([
-  'pubmsg_hilight', '{pubmsghinick $0 $3 $1}$2'
-]);
 
 my %saved_colors;
 my %session_colors = {};
@@ -107,8 +102,12 @@ sub sig_public {
   }
 
   $color = "0".$color if ($color < 10);
-  $server->command('/^format pubmsg %K<%w$2'.chr(3).$color.'$[-11]0%K>%K|%n $1');
-  $server->command('/^format action_core "%m            * %K|'.chr(3).$color.' $*%w"');
+  $server->command('/^format pubmsg %w$2'.chr(3).$color.'$[-11]0%K|%n $1');
+  $server->command('/^format action_core %m          * %K|'.chr(3).$color.' $*%w');
+  $server->command('/^format pubmsg_me %w$2'.chr(3).$color.'$[-11]0%K|%Y $1');
+  $server->command('/^format pubmsg_me_channel %w$3$2'.chr(3).$color.'$[-11]0{msgchannel $1}%K|%Y $2');
+  $server->command('/^format pubmsg_hilight %w$0$3'.chr(3).$color.'$[-11]1%K|%Y $2');
+  $server->command('/^format pubmsg_hilight_channel %w$0$4'.chr(3).$color.'$[-11]1{msgchannel $2}%K| %Y $3');
  # $server->command('/^format action_public {pubaction
  # '.chr(3).$color.'$0}$1');
 }
