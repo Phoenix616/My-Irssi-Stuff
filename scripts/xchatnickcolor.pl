@@ -78,7 +78,6 @@ sub simple_hash {
   return $counter;
 }
 
-# FIXME: breaks /HILIGHT etc.
 sub sig_public {
   my ($server, $msg, $nick, $address, $target) = @_;
   my $chanrec = $server->channel_find($target);
