@@ -40,6 +40,7 @@ our %IRSSI = (
 # =========
 # 0.2: Handle outgoing messages
 #
+# 0.3: Add completion bar
 
 use File::Basename 'dirname';
 use File::Spec;
@@ -176,7 +177,7 @@ sub sb_emoji {
                 }
             }
         } 
-        if (not $txt or length($txt) == 0) {
+        if (length($txt) > 0 and length($txt) <= $suggestStartSearch) {
             $txt = "Type to search emoji";
         }
     }
