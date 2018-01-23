@@ -1,7 +1,6 @@
 use strict;
-use warnings;
 
-our $VERSION = '0.2';
+our $VERSION = '0.3';
 our %IRSSI = (
     authors     => 'Lars Djerf, Nei, Phoenix616',
     contact     => 'lars.djerf@gmail.com, Nei @ anti@conference.jabber.teamidiot.de, Phoenix616 @ mail@moep.tv',
@@ -31,6 +30,10 @@ our %IRSSI = (
 # after loading the script, configure the channels/networks and the
 # data file. aferwards, all incoming messages will have words between
 #  :...: replaced according to the file
+#
+# if you want to see completions when you type add the statusbar item somewhere convenient:
+#   /statusbar window add -after barstart colon_emojie
+#
 
 # 
 # Changelog
@@ -46,17 +49,21 @@ use constant ScriptFile => __FILE__;
 my %netchans;
 my ($lastfile, $lastfilemod);
 
-my ($replaceIncoming, $replaceOutgoing);
+my ($replaceIncoming, $replaceOutgoing, $suggestStartSearch);
 
 my %emojie;
 
 my $regex = qr/(?!)/;
 
+my $colon = 0;
+my $input = "";
+my $prevKey = 0;
+
 sub sig_message_public {
     my ($server, $msg, $nick, $address, $channel, @x) = @_;
     return unless $replaceIncoming;
     if (_want_targ($server, $channel)) {
-	&event_message;
+        &event_message;
     }
 }
 
@@ -64,7 +71,7 @@ sub sig_message_private {
     my ($server, $msg, $nick, $address, @x) = @_;
     return unless $replaceIncoming;
     if (_want_targ($server, $nick)) {
-	&event_message;
+        &event_message;
     }
 }
 
@@ -82,19 +89,12 @@ sub event_message {
     Irssi::signal_continue($server, $msg, @rest);
 }
 
-sub sig_send {
-    my ($msg, @rest) = @_;
-    if ($replaceOutgoing) {
-        $msg =~ s/$regex/$emojie{$1}/g;
-        Irssi::signal_continue($msg, @rest);
-    }
-}
-
 sub sig_setup_changed {
     my @targets = split ' ', lc Irssi::settings_get_str('colon_emoji_target');
     %netchans = map { ($_ => 1) } @targets;
     $replaceIncoming = Irssi::settings_get_str('colon_emoji_replace_incoming');
     $replaceOutgoing = Irssi::settings_get_str('colon_emoji_replace_outgoing');
+    $suggestStartSearch = Irssi::settings_get_str('colon_emoji_suggest_start_search');
     my $file = Irssi::settings_get_str('colon_emoji_file');
     my $file2 = $file;
     $file2 =~ s/^~\//$ENV{HOME}\//;
@@ -102,25 +102,89 @@ sub sig_setup_changed {
 	$file2 = File::Spec->catfile(dirname(abs_path(+ScriptFile)), $file2);
     }
     unless (defined $lastfile && $lastfile eq $file2 && ((-M $file2) // 0) >= ($lastfilemod//0)) {
-	if (open my $in, '<', $file2) {
-	    %emojie = ();
-	    while (my $e = <$in>) {
-		chomp $e;
-		next if $e =~ /^>>/;
-		if ($e =~ /^\s*(.*?)\s+"(.*?)"/) {
-		    $emojie{$1} = $2;
-		}
-	    }
-	    print CLIENTERROR "Warning, no emoji were found in $file" unless keys %emojie;
-	}
-	else {
-	    print CLIENTERROR "Could not read colon_emoji_file $file: $!";
-	}
-	$lastfile = $file2;
-	$lastfilemod = -M $file2;
-	my $pat = join '|', map { quotemeta } sort { length $b <=> length $a || $b cmp $a } keys %emojie;
-	$regex = length $pat ? qr/:($pat):/ : qr/(?!)/;
+        if (open my $in, '<', $file2) {
+            %emojie = ();
+            while (my $e = <$in>) {
+                chomp $e;
+                next if $e =~ /^>>/;
+                if ($e =~ /^\s*(.*?)\s+"(.*?)"/) {
+                    $emojie{$1} = $2;
+                }
+            }
+            print CLIENTERROR "Warning, no emoji were found in $file" unless keys %emojie;
+        }
+        else {
+            print CLIENTERROR "Could not read colon_emoji_file $file: $!";
+        }
+        $lastfile = $file2;
+        $lastfilemod = -M $file2;
+        my $pat = join '|', map { quotemeta } sort { length $b <=> length $a || $b cmp $a } keys %emojie;
+        $regex = length $pat ? qr/:($pat):/ : qr/(?!)/;
     }
+}
+
+sub sig_key_pressed {
+	my ($key) = @_;
+
+	if (not $colon and $key == 58) {
+		$colon = 1;
+		Irssi::statusbar_items_redraw('colon_emojie');
+	}
+    elsif ($colon) {
+        if ($key == 45 or $key == 95 or ($key >= 97 and $key <= 122)) {
+            $input .= chr($key);
+            Irssi::statusbar_items_redraw('colon_emojie');
+        }
+        elsif ($key == 8 or $key == 127) {
+            if ($prevKey == 27) {
+                _leave_colon();
+            }
+            else {
+                if (length($input) == 0) {
+                    _leave_colon();
+                }
+                else {
+                    $input = substr $input, 0, -1;
+                    Irssi::statusbar_items_redraw('colon_emojie');
+                }
+            }
+        }
+        else {
+            _leave_colon();
+        }
+    }
+    $prevKey = $key;
+
+};
+
+sub _leave_colon {
+    $colon = 0;
+    $input = "";
+    Irssi::statusbar_items_redraw('colon_emojie');
+}
+
+sub sb_emoji {
+    my ($item, $get_size_only) = @_;
+    
+	my $txt = "";
+	if ($colon) {
+        if (length($input) > $suggestStartSearch) {
+            foreach my $key (keys %emojie) {
+                if (_starts_with($key, $input)) {
+                    $txt = $key." ".$emojie{$key};
+                    last;
+                }
+            }
+        } 
+        if (not $txt or length($txt) == 0) {
+            $txt = "Type to search emoji";
+        }
+    }
+	$item->default_handler($get_size_only, "\%0{sb $txt}", undef, 1);
+}
+
+sub _starts_with {
+    return substr($_[0], 0, length($_[1])) eq $_[1];
 }
 
 sub _want_targ {
@@ -144,11 +208,16 @@ Irssi::settings_add_str('colon_emoji', 'colon_emoji_target', '');
 Irssi::settings_add_str('colon_emoji', 'colon_emoji_file', 'emoji_def.txt');
 Irssi::settings_add_str('colon_emoji', 'colon_emoji_replace_incoming', '1');
 Irssi::settings_add_str('colon_emoji', 'colon_emoji_replace_outgoing', '1');
+Irssi::settings_add_str('colon_emoji', 'colon_emoji_suggest_start_search', '2');
 
 Irssi::signal_add('setup changed' => 'sig_setup_changed');
 Irssi::signal_add_first('message public' => 'sig_message_public');
 Irssi::signal_add_first('message private' => 'sig_message_private');
 Irssi::signal_add_first('send command' => 'sig_send');
 Irssi::signal_add_first('send text' => 'sig_send');
+
+Irssi::signal_add_last('gui key pressed' => 'sig_key_pressed');
+
+Irssi::statusbar_item_register('colon_emojie', undef, 'sb_emoji');
 
 init();
