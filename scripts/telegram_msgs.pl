@@ -21,6 +21,7 @@
 # THE SOFTWARE.
 
 # Changelog:
+# 1.2 - add config option to specify which channels should send notifications
 # 1.1 - compress multiple messages into one
 # 1.0 - initial release, based on email_msgs 1.0:
 #   * support for public messages as well (with/without mentions);
@@ -50,7 +51,7 @@ use Parallel::ForkManager;
 
 my $pm = Parallel::ForkManager->new(5);
 
-$VERSION = '1.1';
+$VERSION = '1.2';
 %IRSSI = (
 	authors => 'Max Lee',
 	contact => 'mail@moep.tv',
@@ -69,15 +70,19 @@ my $FORMAT = $IRSSI{'name'} . '_crap';
 my @msgs = ();
 my $notify_task = undef;
 
-Irssi::settings_add_str('misc', $IRSSI{'name'} . '_away_only', '0');
-Irssi::settings_add_str('misc', $IRSSI{'name'} . '_detailed', '1');
-Irssi::settings_add_str('misc', $IRSSI{'name'} . '_delay', '1000');
-Irssi::settings_add_str('misc', $IRSSI{'name'} . '_notify_after', '10');
-Irssi::settings_add_str('misc', $IRSSI{'name'} . '_pub_r_msgs', '0');
-Irssi::settings_add_str('misc', $IRSSI{'name'} . '_pri_r_msgs', '1');
-Irssi::settings_add_str('misc', $IRSSI{'name'} . '_pub_s_msgs', '0');
-Irssi::settings_add_str('misc', $IRSSI{'name'} . '_pri_s_msgs', '0');
-Irssi::settings_add_str('misc', $IRSSI{'name'} . '_mentions', '1');
+Irssi::settings_add_str('telegram_msgs', $IRSSI{'name'} . '_away_only', '0');
+Irssi::settings_add_str('telegram_msgs', $IRSSI{'name'} . '_detailed', '1');
+Irssi::settings_add_str('telegram_msgs', $IRSSI{'name'} . '_delay', '1000');
+Irssi::settings_add_str('telegram_msgs', $IRSSI{'name'} . '_notify_after', '10');
+Irssi::settings_add_str('telegram_msgs', $IRSSI{'name'} . '_pub_r_msgs', '0');
+Irssi::settings_add_str('telegram_msgs', $IRSSI{'name'} . '_pri_r_msgs', '1');
+Irssi::settings_add_str('telegram_msgs', $IRSSI{'name'} . '_pub_s_msgs', '0');
+Irssi::settings_add_str('telegram_msgs', $IRSSI{'name'} . '_pri_s_msgs', '0');
+Irssi::settings_add_str('telegram_msgs', $IRSSI{'name'} . '_mentions', '1');
+
+Irssi::settings_add_str('telegram_msgs', $IRSSI{'name'} . '_notify_channels', '');
+Irssi::settings_add_str('telegram_msgs', $IRSSI{'name'} . '_api_key', '');
+Irssi::settings_add_str('telegram_msgs', $IRSSI{'name'} . '_to_chat_id', '');
 
 # user configurable variables (1->yes; 0->no):
 ##############################################
@@ -100,9 +105,10 @@ my $pri_s_msgs   = Irssi::settings_get_str($IRSSI{'name'} . '_pri_s_msgs');
 # whether public mentions received should be send (when $pub_r_msgs=0):
 my $mentions     = Irssi::settings_get_str($IRSSI{'name'} . '_mentions');
 ##############################################
-
-Irssi::settings_add_str('misc', $IRSSI{'name'} . '_api_key', '');
-Irssi::settings_add_str('misc', $IRSSI{'name'} . '_to_chat_id', '');
+# Configurable strings:
+##############################################
+# Channels where all messages should be send to telegram
+my $notifyChannels =  Irssi::settings_get_str($IRSSI{'name'} . '_notify_channels');
 
 Irssi::theme_register([
 	$FORMAT,
@@ -145,7 +151,7 @@ sub handle_privmsg {
 sub handle_pubmsg {
 	my ($server, $message, $user, $address, $target) = @_;
 
-	if ($server->{usermode_away} && $target eq "#moep") {
+	if ($server->{usermode_away} && index($notifyChannels, $target) >= 0) {
 		send_msg($server, $message, $user, $address, $target);
 	} elsif ($server->{usermode_away} || !$away_only) {
 		if (index($message,$server->{nick}) >= 0 || $pub_r_msgs) {
