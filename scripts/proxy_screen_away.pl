@@ -1,12 +1,13 @@
 use Irssi;
 use strict;
 use FileHandle;
+use Try::Tiny;
 
 use vars qw($VERSION %IRSSI);
 
-$VERSION = "0.9.8.1 - 1.0";
+$VERSION = "0.9.8.1 - 1.1";
 %IRSSI = (
-    authors     => 'Phoenix616 <mail@moep.tv>, Andreas \'ads\' Scherbaum <ads@wars-nicht.de>',
+    authors     => 'Phoenix616 <max@themoep.de>, Andreas \'ads\' Scherbaum <ads@wars-nicht.de>',
     name        => 'proxy_and_screen_away',
     description => 'set (un)away, if screen and proxy is attached/detached',
     license     => 'GPL v2',
@@ -19,6 +20,7 @@ $VERSION = "0.9.8.1 - 1.0";
 # extended with proxy support by Phoenix616 <mail@moep.tv>
 #
 # changes:
+#  25.01.2020 added file to indicate status
 #  13.03.2016 added support for proxies
 #  20.12.2014 fix the bug when screenname is changed during the session
 #  07.02.2004 fix error with away mode
@@ -141,6 +143,7 @@ Irssi::settings_add_int('misc', $IRSSI{'name'} . '_repeat', 5);
 Irssi::settings_add_str('misc', $IRSSI{'name'} . '_message', "not here ...");
 Irssi::settings_add_str('misc', $IRSSI{'name'} . '_window', "1");
 Irssi::settings_add_str('misc', $IRSSI{'name'} . '_nick', "");
+Irssi::settings_add_str('misc', $IRSSI{'name'} . '_file_path', "");
 
 # init process
 screen_away();
@@ -284,6 +287,20 @@ sub set_away {
       }
     }
     
+    my $file = Irssi::settings_get_str($IRSSI{name} . '_file_path');
+    if (length($file) != 0) {
+      try {
+        if (open(FH, '>', $file)) {
+          print FH $message;
+          close(FH);
+        } else {
+          Irssi::printformat(MSGLEVEL_CLIENTCRAP, 'screen_away_crap', "unable to write to file $file")
+        }
+      } catch {
+        Irssi::printformat(MSGLEVEL_CLIENTCRAP, 'screen_away_crap', "caught error while writing to $file: $_")
+      }
+    }
+
     if ($changed > 0) {    
       if (length(Irssi::settings_get_str($IRSSI{name} . '_window')) > 0) {
         # if length of window is greater then 0, make this window active
@@ -324,6 +341,15 @@ sub set_unaway {
       # set old nick
       $server->command("NICK " . $old_nicks{$server->{tag}});
       $old_nicks{$server->{tag}} = "";
+    }
+  }
+
+  my $file = Irssi::settings_get_str($IRSSI{name} . '_file_path');
+  if (length($file) != 0) {
+    try {
+      unlink($file);
+    } catch {
+      Irssi::printformat(MSGLEVEL_CLIENTCRAP, 'screen_away_crap', "caught error while deleting $file: $_")
     }
   }
   
