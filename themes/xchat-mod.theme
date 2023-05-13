@@ -1,12 +1,12 @@
 #######################################################################
 #
-# xchat.theme for irssi - http://waxman.org/irssi/xchat.theme (xchat.png)
+# xchat-mod.theme for irssi - https://github.com/Phoenix616/My-Irssi-Stuff/blob/master/themes/xchat-mod.theme
 # 
-# xchat.theme, Public Beta, 1.5.1 2004/08/06
+# xchat-mod.theme, Public Beta, 1.6.0 2018/01/18
 #
-# Copyright 2004 Dave Waxman
+# Copyright 2004 Dave Waxman, 2018 Max Lee
 #
-# Please report any bugs to xchattheme@waxman.org
+# Please report any bugs to xchattheme@moep.tv
 #
 # For best results it is suggested you do the following:                                                                  
 # /set show_nickmode_empty on                                     
@@ -208,25 +208,29 @@ formats = {
     names_nick = "%K[%n$0$1%K] ";
     endofnames = "%nUsers %c$1 %nnicks %K[%c$2 %nops, %c$3 %nhalfops, %c$4 %nvoices, %c$5 %nnormal%K]";
     quit_once = "{channel $3} {channick $0} {chanhost $1} %K(%n{reason $2}%K)%n {channel $_$2$_}";
-    nick_changed = "%m          %p~ %K| %B$0 %Kis now known as %B$1";
-    chanmode_change = "%m          %c/ %K| %W{nickhilight $2} %nsets modes %K[%n{$channelhilight $0} {mode $1}%K]";
-    channel_mode = "%m          %C/ %K| %W{nickhilight $2} %nsets modes %K[%n{$channelhilight $0} {mode $1}%K]";
+    nick_changed = "%m          %C~ %K| %B$0 %Kis now known as %B$1";
+    chanmode_change = "%m          %p/ %K| %W{nickhilight $2} %nsets modes %K[%n{$channelhilight $0} {mode $1}%K]";
+    channel_mode = "%m          %p/ %K| %W{nickhilight $2} %nsets modes %K[%n{$channelhilight $0} {mode $1}%K]";
     topic = "%m          %y/ %K| %nTopic for {channelhilight $0} is $1";
     new_topic = "%m          %Y/ %K| %W{nick $0} %nhas changed the topic to: %C$2";
     topic_unset = "%m          %Y/ %K| %nTopic unset by {nick $0} on {channel $1}";
     daychange = "%bDay changed to %%d %%b %%Y";
     your_nick_changed = "%m          %P~ %K| %KYou're now known as %W$1";
 
-    pubmsg = "%w$2\00303$[-11]0%K|%n $1";
+    pubmsg = "%w$2\00306$[-11]0%K|%n $1";
     own_msg_private_query = "%y$[-11]2%K|%n $1";
     msg_private_query = "%w$[-11]0%K|%n $2";
     own_msg = "%y$2$[-11]0%K| %n$1";
     own_msg_private = "%Y$[-11]0%K|%n $1-";
-    pubmsg_me = "{pubmsgmenick {menick $[-11]0}}%K|%Y $1";
-    pubmsg_me_channel = "{pubmsgmenick $3 {menick $[-11]0}{msgchannel $1}}%K|%Y $2";
-    pubmsg_hilight = "{pubmsghinick $0$3$[-11]1}%K|%Y $2";
-    pubmsg_hilight_channel = "{pubmsghinick $0$4$[-11]1{msgchannel $2}}%K|%Y $3";
+    pubmsg_me = "%w$2\00306$[-11]0%K|%Y $1";
+    pubmsg_me_channel = "%w$3$2\00306$[-11]0{msgchannel $1}%K|%Y $2";
+    pubmsg_hilight = "%w$0$3\00306$[-11]1%K|%Y $2";
+    pubmsg_hilight_channel = "%w$0$4\00306$[-11]1{msgchannel $2}%K| %Y $3";
     #pubmsg_channel = "{pubmsgnick {pubnick $[-11]0}{msgchannel $1}}%K|%n $2";
+
+    pubmsgnick = "{msgnick $0 $1-}";
+    pubnick = "%c$0-%n";
+    msgnick = "%b<%C$0$1-%b>%n %|";
 
     #pubmsg = "{pubmsgnick $2 {pubnick \00304$0}}$1";
     talking_with = "%nYou are now talking with %W$0";
