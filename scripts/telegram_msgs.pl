@@ -21,6 +21,7 @@
 # THE SOFTWARE.
 
 # Changelog:
+# 1.2.1 - try messaging from bot on load
 # 1.2 - add config option to specify which channels should send notifications
 # 1.1 - compress multiple messages into one
 # 1.0 - initial release, based on email_msgs 1.0:
@@ -51,12 +52,12 @@ use Parallel::ForkManager;
 
 my $pm = Parallel::ForkManager->new(5);
 
-$VERSION = '1.2';
+$VERSION = '1.2.1';
 %IRSSI = (
 	authors => 'Max Lee',
-	contact => 'mail@moep.tv',
+	contact => 'max@themoep.de',
 	url =>
-		"https://moep.tv",
+		"https://themoep.de",
 	name => 'telegram_msgs',
 	description =>
 		"Send you messages via telegram while you're away or not. " .
@@ -121,7 +122,6 @@ my $api_key = Irssi::settings_get_str($IRSSI{'name'} . '_api_key');
 # opening https://api.telegram.org/bot{your api key}/getUpdates
 my $to_chat_id = Irssi::settings_get_str($IRSSI{'name'} . '_to_chat_id');
 
-
 return if (!check_setup($api_key, $to_chat_id));	
 
 sub handle_ownprivmsg {
@@ -173,6 +173,8 @@ sub check_setup {
 		Irssi::printformat(MSGLEVEL_CLIENTCRAP, $FORMAT, $IRSSI{'name'} . ' was not setup right, please set the option ' . $IRSSI{'name'} . '_to_chat_id');
 		return 0;
 	}
+
+	api_call('telegram_msgs.pl script enabled!');
 	return 1;
 }
 
