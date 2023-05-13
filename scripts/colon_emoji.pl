@@ -1,6 +1,6 @@
 use strict;
 
-our $VERSION = '0.3';
+our $VERSION = '0.4';
 our %IRSSI = (
     authors     => 'Lars Djerf, Nei, Phoenix616',
     contact     => 'lars.djerf@gmail.com, Nei @ anti@conference.jabber.teamidiot.de, Phoenix616 @ mail@moep.tv',
@@ -41,6 +41,9 @@ our %IRSSI = (
 # 0.2: Handle outgoing messages
 #
 # 0.3: Add completion bar
+# 0.3.1: Show more in completion bar
+#
+# 0.4: Add tab completion of short cuts
 
 use File::Basename 'dirname';
 use File::Spec;
@@ -50,7 +53,7 @@ use constant ScriptFile => __FILE__;
 my %netchans;
 my ($lastfile, $lastfilemod);
 
-my ($replaceIncoming, $replaceOutgoing, $suggestStartSearch);
+my ($replaceIncoming, $replaceOutgoing, $suggestStartSearch, $tabCompletion);
 
 my %emojie;
 
@@ -96,6 +99,7 @@ sub sig_setup_changed {
     $replaceIncoming = Irssi::settings_get_str('colon_emoji_replace_incoming');
     $replaceOutgoing = Irssi::settings_get_str('colon_emoji_replace_outgoing');
     $suggestStartSearch = Irssi::settings_get_str('colon_emoji_suggest_start_search');
+    $tabCompletion = Irssi::settings_get_str('colon_emoji_tab_completion');
     my $file = Irssi::settings_get_str('colon_emoji_file');
     my $file2 = $file;
     $file2 =~ s/^~\//$ENV{HOME}\//;
@@ -158,6 +162,21 @@ sub sig_key_pressed {
 
 };
 
+sub sig_completion {
+    my ($strings_ref, $window, $word, $linestart, $want_space) = @_;
+    
+    Irssi::print($word." ".$linestart." ".$want_space." ".$strings_ref);
+    if ($tabCompletion and _starts_with($word, ":")) {
+        if (length($word) > $suggestStartSearch) {
+            foreach my $key (keys %emojie) {
+                if (_starts_with($key, substr($word, 1, length($word)))) {
+                    push @$strings_ref, ":".$key.":";
+                }
+            }
+        } 
+    }
+}
+
 sub _leave_colon {
     $colon = 0;
     $input = "";
@@ -170,10 +189,14 @@ sub sb_emoji {
 	my $txt = "";
 	if ($colon) {
         if (length($input) > $suggestStartSearch) {
+            my $i = 0;
             foreach my $key (keys %emojie) {
-                if (_starts_with($key, $input)) {
-                    $txt = $key." ".$emojie{$key};
-                    last;
+                if (_starts_with($key, $input) && $i < 3) {
+                    if (length($txt) > 0) {
+                        $txt .= "| ";
+                    }
+                    $txt .= $key." ".$emojie{$key};
+                    $i++;
                 }
             }
         } 
@@ -210,6 +233,7 @@ Irssi::settings_add_str('colon_emoji', 'colon_emoji_file', 'emoji_def.txt');
 Irssi::settings_add_str('colon_emoji', 'colon_emoji_replace_incoming', '1');
 Irssi::settings_add_str('colon_emoji', 'colon_emoji_replace_outgoing', '1');
 Irssi::settings_add_str('colon_emoji', 'colon_emoji_suggest_start_search', '2');
+Irssi::settings_add_str('colon_emoji', 'colon_emoji_tab_completion', '1');
 
 Irssi::signal_add('setup changed' => 'sig_setup_changed');
 Irssi::signal_add_first('message public' => 'sig_message_public');
@@ -217,6 +241,7 @@ Irssi::signal_add_first('message private' => 'sig_message_private');
 Irssi::signal_add_first('send command' => 'sig_send');
 Irssi::signal_add_first('send text' => 'sig_send');
 
+Irssi::signal_add_last('complete world' => 'sig_completion');
 Irssi::signal_add_last('gui key pressed' => 'sig_key_pressed');
 
 Irssi::statusbar_item_register('colon_emojie', undef, 'sb_emoji');
